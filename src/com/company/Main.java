@@ -10,44 +10,63 @@ import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.Random;
 
 public class Main {
 
     public static void main(String[] args) throws Exception {
-        while (true) {
-            ArrayList<String> words = new ArrayList<>();
-            words.add(getCamelCaseRandomWordFromCrayola());
-            words.add(getCamelCaseRandomWordFromOccupations());
-            words.add(getCamelCaseRandomWordFromAdjs());
-            String uniqueString = words.get(0) + words.get(1) + words.get(2);
-            System.out.println(uniqueString);
+        HashSet<String> uuid = new HashSet<>();
+        //while (true) {
+        JSONArray colors = parseJSONFile("crayola.json", "colors");
+        JSONArray occupations = parseJSONFile("occupations.json", "occupations");
+        JSONArray adjectives = parseJSONFile("adjs.json", "adjs");
+        int totalCombinations = colors.size() * occupations.size() * adjectives.size();
+        Integer[] randomNumbers = GetRandomNumbersWithoutRepetition(totalCombinations);
+        System.out.println("totalCombinations: " + totalCombinations);
+            for (int i = 0; i < totalCombinations; i++) {
+                ArrayList<String> words = new ArrayList<>();
+                int crayolaRandomIndex = randomNumbers[i]%colors.size();
+                words.add(getCamelCaseRandomWordFromCrayola(colors, crayolaRandomIndex));
+                int occupationRandomIndex = (randomNumbers[i]/colors.size())%occupations.size();
+                words.add(getCamelCaseRandomWordFromOccupations(occupations, occupationRandomIndex));
+                int adjectiveRandomIndex = (randomNumbers[i]/(colors.size()*occupations.size()))%occupations.size();
+                words.add(getCamelCaseRandomWordFromAdjs(adjectives, adjectiveRandomIndex));
+                String uniqueString = words.get(0) + words.get(1) + words.get(2);
+                System.out.println(i + ". " + uniqueString);
+                if(!uuid.contains(uniqueString)) {
+                    uuid.add(uniqueString);
+                }
+                else if (uuid.contains(uniqueString)){
+                    System.out.println("--------------Repeated UUID------------");
+                }
 
-            BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(System.in));
-            bufferedReader.readLine();
-        }
+                BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(System.in));
+                bufferedReader.readLine();
+            }
+        //}
     }
 
-    private static String getCamelCaseRandomWordFromCrayola() throws Exception{
-        JSONObject jsonObject = parseJSONFile("crayola.json");
-        JSONArray colors = (JSONArray)jsonObject.get("colors");
-        int randomIndex = generateRandomIndex(colors.size());
+    private static Integer[] GetRandomNumbersWithoutRepetition(int size) {
+        Integer[] arr = new Integer[size];
+        for (int i = 0; i < size; i++) {
+            arr[i] = i;
+        }
+        Collections.shuffle(Arrays.asList(arr));
+        return arr;
+    }
+
+    private static String getCamelCaseRandomWordFromCrayola(JSONArray colors, int randomIndex) throws Exception{
         String crayolaWord = (String)((JSONObject)colors.get(randomIndex)).get("color");
         return camelCase(crayolaWord);
     }
 
-    private static String getCamelCaseRandomWordFromOccupations() throws Exception{
-        JSONObject jsonObject = parseJSONFile("occupations.json");
-        JSONArray occupations = (JSONArray)jsonObject.get("occupations");
-        int randomIndex = generateRandomIndex(occupations.size());
+    private static String getCamelCaseRandomWordFromOccupations(JSONArray occupations, int randomIndex) throws Exception{
         String occupationsWord = (String) occupations.get(randomIndex);
         return camelCase(occupationsWord);
     }
 
-    private static String getCamelCaseRandomWordFromAdjs() throws Exception{
-        JSONObject jsonObject = parseJSONFile("adjs.json");
-        JSONArray adjectives = (JSONArray) jsonObject.get("adjs");
-        int randomIndex = generateRandomIndex(adjectives.size());
+    private static String getCamelCaseRandomWordFromAdjs(JSONArray adjectives, int randomIndex) throws Exception{
         String adjsWord = (String)adjectives.get(randomIndex);
         return camelCase(adjsWord);
     }
@@ -78,9 +97,9 @@ public class Main {
         return arr;
     }
 
-    private static JSONObject parseJSONFile(String jsonFile) throws Exception{
+    private static JSONArray parseJSONFile(String jsonFile, String attribute) throws Exception{
         JSONParser parser = new JSONParser();
-        Object object = parser.parse(new FileReader(jsonFile));
-        return (JSONObject) object;
+        JSONObject jsonObject = (JSONObject)parser.parse(new FileReader(jsonFile));
+        return (JSONArray)jsonObject.get(attribute);
     }
 }
